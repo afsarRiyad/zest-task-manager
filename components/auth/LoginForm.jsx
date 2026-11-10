@@ -3,15 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { login, getCurrentSession } from '@/lib/auth';
 import TextField from '@/components/ui/TextField';
 import PasswordField from '@/components/ui/PasswordField';
 import Icon from '@/components/Icon';
-import { AuthError, getCurrentSession, login } from '@/lib/auth';
-
-function safeNext(value) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard';
-  return value;
-}
 
 export default function LoginForm() {
   const router = useRouter();
@@ -20,21 +15,22 @@ export default function LoginForm() {
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [expired, setExpired] = useState(false);
   const [nextPath, setNextPath] = useState('/dashboard');
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    async function checkSession() {
+      if (typeof window === 'undefined') return;
 
-    const params = new URLSearchParams(window.location.search);
-    const target = safeNext(params.get('next'));
-    const emailParam = params.get('email');
+      const session = await getCurrentSession();
+      if (session) {
+        // User is already logged in, redirect to dashboard
+        const target = nextPath || '/dashboard';
+        setNextPath(target);
+        router.replace(target);
+      }
+    }
 
-    setNextPath(target);
-    if (emailParam) setEmail(emailParam);
-    setExpired(params.get('expired') === '1');
-
-    if (getCurrentSession()) router.replace(target);
+    checkSession();
   }, [router]);
 
   function clearError(field) {
@@ -59,7 +55,9 @@ export default function LoginForm() {
 
     try {
       await login({ email, password, remember });
-      router.replace(nextPath);
+      // Login successful - redirect to dashboard or next path
+      const target = nextPath || '/dashboard';
+      router.replace(target);
     } catch (error) {
       if (error instanceof AuthError) {
         setErrors({ [error.field]: error.message });
@@ -73,16 +71,6 @@ export default function LoginForm() {
 
   return (
     <div>
-      {expired ? (
-        <div
-          role="status"
-          className="mb-4 flex items-start gap-2 rounded-xl border border-amber/20 bg-amber/[0.06] px-3 py-2.5 text-[11.5px] leading-4 text-amber/90"
-        >
-          <Icon name="info" size={14} className="mt-0.5 shrink-0" />
-          Your session ended. Sign in again to pick up where you left off.
-        </div>
-      ) : null}
-
       {errors.form ? (
         <div
           role="alert"
@@ -90,6 +78,16 @@ export default function LoginForm() {
         >
           <Icon name="alert" size={14} className="mt-0.5 shrink-0" />
           {errors.form}
+        </div>
+      ) : null}
+
+      {errors.email ? (
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-2 rounded-xl border border-rose/20 bg-rose/[0.07] px-3 py-2.5 text-[11.5px] leading-4 text-rose"
+        >
+          <Icon name="alert" size={14} className="mt-0.5 shrink-0" />
+          {errors.email}
         </div>
       ) : null}
 
@@ -148,8 +146,7 @@ export default function LoginForm() {
         >
           {submitting ? (
             <>
-              <Icon name="loader" size={16} className="animate-spin" />
-              Signing in…
+              <Icon name="loader" size={16} className="animate-spin" />Signing in…
             </>
           ) : (
             <>

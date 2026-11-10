@@ -8,7 +8,6 @@ import Icon from '@/components/Icon';
 import ProductPreview from '@/components/marketing/ProductPreview';
 import AnimeCompanion from '@/features/mascot/AnimeCompanion';
 import { useTheme } from '@/components/ThemeProvider';
-import { getCurrentUser } from '@/lib/auth';
 
 const MOODS = [
   {
@@ -55,13 +54,11 @@ export default function Landing() {
   const [mood, setMood] = useState('happy');
   const { resolvedTheme, setTheme } = useTheme();
 
-  useEffect(() => {
-    setUser(getCurrentUser());
-  }, []);
+  // Removed getCurrentUser call - no auth check
 
   const activeMood = MOODS.find((item) => item.id === mood) || MOODS[1];
-  const primaryHref = user ? '/dashboard' : '/signup';
-  const primaryLabel = user ? 'Open Zest' : 'Start free';
+  const primaryHref = '/dashboard';
+  const primaryLabel = 'Open Zest';
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
@@ -90,17 +87,19 @@ export default function Landing() {
             >
               <Icon name={resolvedTheme === 'dark' ? 'sun' : 'moon'} size={16} />
             </button>
+
             <Link
-              href={user ? '/dashboard' : '/login'}
+              href="/dashboard"
               className="hidden h-9 items-center rounded-full px-3.5 text-[11.5px] font-medium text-ink-2 transition-colors hover:bg-ink/[0.05] hover:text-ink sm:inline-flex"
             >
-              {user ? 'Dashboard' : 'Log in'}
+              Dashboard
             </Link>
+
             <Link
-              href={primaryHref}
+              href="/dashboard"
               className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-[11.5px] font-semibold text-on-accent shadow-soft transition-colors hover:bg-accent-deep"
             >
-              {primaryLabel}
+              Open Zest
               <Icon name="arrowUpRight" size={13} strokeWidth={2} />
             </Link>
           </div>
@@ -130,13 +129,12 @@ export default function Landing() {
             </h1>
 
             <p className="mt-6 max-w-[47ch] text-[14.5px] leading-6 text-ink-2 sm:text-[15.5px] sm:leading-7">
-              Zest is a task manager with a focus companion who reads the room, keeps the
-              plan light, and makes finishing feel good.
+              Zest is a task manager with a focus companion who reads the room, keeps the plan light, and makes finishing feel good.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-2.5">
-              <Link href={primaryHref} className="btn-primary h-12 px-6 text-[13px]">
-                {primaryLabel}
+              <Link href="/dashboard" className="btn-primary h-12 px-6 text-[13px]">
+                Open Zest
                 <Icon name="arrowRight" size={16} />
               </Link>
               <a href="#features" className="btn-secondary h-12 px-5 text-[13px]">
@@ -171,13 +169,14 @@ export default function Landing() {
               <div>
                 <p className="label-caps">The system</p>
                 <h2 className="mt-3 max-w-[15ch] font-display text-[34px] font-semibold leading-[1.02] tracking-[-0.05em] text-ink sm:text-[44px]">
-                  Less managing. More{' '}
-                  <span className="font-editorial font-semibold italic text-accent">finishing.</span>
+                  Less managing. More
+                  <span className="font-editorial font-semibold italic text-accent">
+                    finishing.
+                  </span>
                 </h2>
               </div>
               <p className="max-w-[40ch] text-[13px] leading-6 text-ink-2">
-                Every control is here because it changes what you do next. Everything else was
-                left out on purpose.
+                Every control is here because it changes what you do next. Everything else was left out on purpose.
               </p>
             </div>
 
@@ -220,7 +219,7 @@ export default function Landing() {
                 <div className="flex flex-col justify-between gap-6 sm:min-h-[196px]">
                   <div>
                     <p className="max-w-[30ch] font-editorial text-[28px] font-medium italic leading-[1.12] tracking-[-0.02em] text-ink">
-                      “A tool should lower the temperature, not raise it.”
+                      "A tool should lower the temperature, not raise it."
                     </p>
                     <p className="mt-4 max-w-[42ch] text-[12.5px] leading-5 text-ink-2">
                       Momentum is allowed to look uneven. A quiet day still counts.
@@ -242,7 +241,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="nova" className="border-t border-line">
+        <section id="nova">
           <div className="mx-auto grid w-full max-w-[1280px] items-center gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:gap-16 lg:py-24">
             <motion.div {...reveal} className="order-2 lg:order-1">
               <div className="relative overflow-hidden rounded-[30px] border border-line bg-gradient-to-b from-elevated via-card to-card">
@@ -369,12 +368,15 @@ export default function Landing() {
         </section>
 
         <section id="principles" className="border-t border-line">
-          <div className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8 lg:py-24">
+          <div className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8 lg:py:24">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)] lg:gap-16">
               <div>
                 <p className="label-caps">The Zest rules</p>
                 <h2 className="mt-3 max-w-[10ch] font-display text-[34px] font-semibold leading-[1.02] tracking-[-0.05em] text-ink sm:text-[42px]">
-                  What we left <span className="font-editorial font-normal italic text-violet">out.</span>
+                  What we left
+                  <span className="font-editorial font-normal italic text-violet">
+                    out.
+                  </span>
                 </h2>
                 <p className="mt-4 max-w-[34ch] text-[12.5px] leading-6 text-ink-2">
                   Restraint is a feature. These are the boundaries the product is built around.
@@ -429,26 +431,26 @@ export default function Landing() {
               <div>
                 <p className="label-caps">Ready when you are</p>
                 <h2 className="mt-3 max-w-[15ch] font-display text-[34px] font-semibold leading-[1.02] tracking-[-0.05em] text-ink sm:text-[46px]">
-                  Make the next hour{' '}
-                  <span className="font-editorial font-normal italic text-violet">lighter.</span>
+                  Make the next hour
+                  <span className="font-editorial font-normal italic text-violet">
+                    lighter.
+                  </span>
                 </h2>
                 <p className="mt-4 max-w-[42ch] text-[13px] leading-6 text-ink-2">
                   Bring the list. Nova will bring the calm. Your first clear page is about a
                   minute away.
                 </p>
                 <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                  <Link href={primaryHref} className="btn-primary h-11 px-5 text-[12.5px]">
-                    {primaryLabel}
+                  <Link href="/dashboard" className="btn-primary h-11 px-5 text-[12.5px]">
+                    Open Zest
                     <Icon name="arrowRight" size={15} />
                   </Link>
-                  {!user ? (
-                    <Link
-                      href="/login"
-                      className="inline-flex h-11 items-center px-3 text-[12px] font-medium text-ink-2 transition-colors hover:text-ink"
-                    >
-                      I already have an account
-                    </Link>
-                  ) : null}
+                  <Link
+                    href="/login"
+                    className="inline-flex h-11 items-center px-3 text-[12px] font-medium text-ink-2 transition-colors hover:text-ink"
+                  >
+                    I already have an account
+                  </Link>
                 </div>
               </div>
 
@@ -498,25 +500,25 @@ export default function Landing() {
               <p className="label-caps">Account</p>
               <div className="mt-3 flex flex-col items-start gap-2">
                 <Link
-                  href={user ? '/dashboard' : '/login'}
+                  href="/dashboard"
                   className="text-[11.5px] text-ink-2 transition-colors hover:text-ink"
                 >
-                  {user ? 'Dashboard' : 'Log in'}
+                  Dashboard
                 </Link>
-                {!user ? (
-                  <Link
-                    href="/signup"
-                    className="text-[11.5px] text-ink-2 transition-colors hover:text-ink"
-                  >
-                    Create account
-                  </Link>
-                ) : null}
+                <Link
+                  href="/login"
+                  className="text-[11.5px] text-ink-2 transition-colors hover:text-ink"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="text-[11.5px] text-ink-2 transition-colors hover:text-ink"
+                >
+                  Create account
+                </Link>
               </div>
             </div>
-          </div>
-
-          <div className="mt-9 flex flex-col gap-2 border-t border-line pt-5 text-[10px] leading-4 text-ink-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>© 2026 Zest. Made for people with better things to do.</span>
           </div>
         </div>
       </footer>
@@ -684,4 +686,4 @@ function SheetMock() {
       </div>
     </div>
   );
-}
+}

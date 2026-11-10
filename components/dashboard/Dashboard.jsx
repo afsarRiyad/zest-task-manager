@@ -27,8 +27,8 @@ import Sheet from '@/components/ui/Sheet';
 import AnimeCompanion from '@/features/mascot/AnimeCompanion';
 import { useToast } from '@/components/Toast';
 
-import { getCurrentSession, logout } from '@/lib/auth';
 import { loadUserData, saveUserData } from '@/lib/userData';
+import { createMockTasks, MOCK_USER } from '@/lib/mockData';
 import { createCategory, createTask, patchTask, toggleTask } from '@/lib/taskModel';
 import { todayLabel } from '@/lib/dates';
 import { VIEW_META } from '@/lib/theme';
@@ -39,13 +39,13 @@ import {
   taskRemoved,
   taskRestored,
   tasksCleared,
-  tasksLoaded,
   tasksLoading,
+  tasksLoaded,
 } from '@/features/tasks/tasksSlice';
 import {
-  categoriesCleared,
-  categoriesLoaded,
   categoriesLoading,
+  categoriesLoaded,
+  categoriesCleared,
   categoryAdded,
 } from '@/features/categories/categoriesSlice';
 import { mascotReact, mascotRest } from '@/features/mascot/mascotSlice';
@@ -94,7 +94,6 @@ export default function Dashboard() {
   const [sort, setSort] = useState('smart');
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-
   const [contextOpen, setContextOpen] = useState(true);
   const [insightsOpen, setInsightsOpen] = useState(false);
 
@@ -106,20 +105,44 @@ export default function Dashboard() {
   const saveFailureRef = useRef(false);
 
   useEffect(() => {
-    const session = getCurrentSession();
-    if (!session) {
-      router.replace('/login?next=/dashboard');
-      return;
+    async function loadSession() {
+      try {
+        // Get user from backend - but don't redirect if no session
+        // User will integrate their own backend auth
+        const session = await fetch('/api/me')
+          .then((res) => res.json())
+          .then((data) => data.user || null);
+        
+        setUser(session);
+        
+        let data = loadUserData(session?.id);
+
+        // Temporary: seed 10 mock tasks when there is nothing saved yet.
+        if (!data.tasks.length) {
+          data = { ...data, tasks: createMockTasks(data.categories) };
+          if (session?.id) saveUserData(session.id, data.tasks, data.categories);
+        }
+
+        dispatch(tasksLoading());
+        dispatch(categoriesLoading());
+        dispatch(tasksLoaded(data.tasks));
+        dispatch(categoriesLoaded(data.categories));
+        setBooting(false);
+      } catch (error) {
+        console.error('Failed to load session:', error);
+        // Don't redirect - fall back to the mock user so the dashboard still renders
+        setUser(MOCK_USER);
+        const fallback = loadUserData(null);
+        dispatch(tasksLoading());
+        dispatch(categoriesLoading());
+        dispatch(tasksLoaded(createMockTasks(fallback.categories)));
+        dispatch(categoriesLoaded(fallback.categories));
+        setBooting(false);
+      }
     }
 
-    setUser(session.user);
-    const data = loadUserData(session.user.id);
-    dispatch(tasksLoading());
-    dispatch(categoriesLoading());
-    dispatch(tasksLoaded(data.tasks));
-    dispatch(categoriesLoaded(data.categories));
-    setBooting(false);
-  }, [dispatch, router]);
+    loadSession();
+  }, [dispatch]);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -135,21 +158,15 @@ export default function Dashboard() {
   const ready = Boolean(user) && taskStatus === 'ready' && categoryStatus === 'ready';
 
   useEffect(() => {
-    if (!ready) return undefined;
-
-    const timer = window.setTimeout(() => {
-      const saved = saveUserData(user.id, tasks, categories);
-      if (!saved && !saveFailureRef.current) {
-        saveFailureRef.current = true;
-        toast('This browser could not save your latest changes. Check storage settings.', {
-          tone: 'error',
-          duration: 6500,
-        });
-      }
-    }, 220);
-
+    if (!user) return undefined;
+    const timer = window.setTimeout(() => setGreet(false), 1800);
     return () => window.clearTimeout(timer);
-  }, [ready, user, tasks, categories, toast]);
+  }, [user]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (mascot.mood === 'idle') return undefined;
@@ -342,7 +359,10 @@ export default function Dashboard() {
 
     dispatch(taskAdded(task));
     dispatch(
-      mascotReact({ mood: 'happy', message: 'Captured. It will keep until you are ready.' })
+      mascotReact({
+        mood: 'happy',
+        message: 'Captured. It will keep until you are ready.',
+      })
     );
     toast('Task added', { tone: 'success' });
   }
@@ -392,15 +412,16 @@ export default function Dashboard() {
     toast('Category created', { tone: 'success' });
   }
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    // Clear local data but don't force redirect - user integrates their own auth
     if (user) saveUserData(user.id, tasks, categories);
-    logout();
+    // Note: logout from lib/auth is optional - user can call their own backend logout
     dispatch(tasksCleared());
     dispatch(categoriesCleared());
-    router.replace('/');
+    // Don't force router.replace - let user decide
   }
 
-  if (booting || !user) return <BootScreen />;
+  if (booting) return <BootScreen />;
 
   return (
     <div className="min-h-dvh">
@@ -429,7 +450,9 @@ export default function Dashboard() {
 
         <div
           className={`mx-auto w-full max-w-[880px] px-4 pb-40 pt-5 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8 ${
-            contextOpen ? 'xl:max-w-[1400px]' : 'xl:max-w-[1080px]'
+            contextOpen
+              ? 'xl:max-w-[1400px]'
+              : 'xl:max-w-[1080px]'
           }`}
           style={{ transition: 'max-width 380ms cubic-bezier(0.22, 1, 0.36, 1)' }}
         >
@@ -451,7 +474,7 @@ export default function Dashboard() {
                     {isOverview ? todayLabel(now) : VIEW_META[view].label}
                   </p>
                   <h1 className="mt-2 font-display text-[27px] font-semibold leading-[1.1] tracking-[-0.045em] text-ink sm:text-[33px]">
-                    {isOverview ? getGreetingLine(user.name, now) : VIEW_META[view].label}
+                    {isOverview ? (user ? getGreetingLine(user.name, now) : "Welcome") : VIEW_META[view].label}
                   </h1>
                   <p className="mt-2 max-w-[56ch] text-[12.5px] leading-5 text-ink-2">
                     {isOverview
@@ -466,8 +489,7 @@ export default function Dashboard() {
                     onClick={openNewTask}
                     className="btn-primary h-10 px-4 text-[12.5px]"
                   >
-                    <Icon name="plus" size={15} strokeWidth={2.1} />
-                    New task
+                    <Icon name="plus" size={15} strokeWidth={2.1} />New task
                   </button>
 
                   <button
@@ -518,7 +540,9 @@ export default function Dashboard() {
 
               {isOverview ? (
                 <div className="mt-5 flex items-center gap-3 lg:hidden">
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-line bg-elevated/70">
+                  <div
+                    className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-line bg-elevated/70"
+                  >
                     <AnimeCompanion
                       mood={companion.mood}
                       variant="avatar"
@@ -575,24 +599,24 @@ export default function Dashboard() {
                     <SortMenu value={sort} onChange={setSort} />
                   </div>
                 </div>
-
-                <SearchField
-                  open={searchOpen}
-                  value={query}
-                  onChange={setQuery}
-                  onClose={closeSearch}
-                />
-
-                {view !== 'completed' ? (
-                  <div className="mt-3">
-                    <QuickAdd
-                      categoryName={activeCategory?.name}
-                      onAdd={handleQuickAdd}
-                      onOpenDetails={openNewTask}
-                    />
-                  </div>
-                ) : null}
               </div>
+
+              <SearchField
+                open={searchOpen}
+                value={query}
+                onChange={setQuery}
+                onClose={closeSearch}
+              />
+
+              {view !== 'completed' ? (
+                <div className="mt-3">
+                  <QuickAdd
+                    categoryName={activeCategory?.name}
+                    onAdd={handleQuickAdd}
+                    onOpenDetails={openNewTask}
+                  />
+                </div>
+              ) : null}
 
               <div className="mt-7 flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-baseline gap-2">
@@ -845,7 +869,7 @@ function emptyCopy({ view, query, counts, status, activeCategory }) {
       title: 'No wins logged yet',
       body: 'Complete a task and it will collect here so the week adds up.',
       actionLabel: 'See open tasks',
-      actionIcon: 'arrowRight',
+      actionIcon: 'checkCircle',
       action: 'overview',
     };
   }
@@ -947,7 +971,7 @@ function TaskSkeleton() {
         <div key={item} className="flex items-center gap-3 rounded-2xl border border-line/60 p-3">
           <div className="skeleton h-[21px] w-[21px] rounded-full" />
           <div className="flex-1 space-y-2">
-            <div className="skeleton h-3.5" style={{ width: `${58 + item * 7}%` }} />
+<div className="skeleton h-3.5" />
             <div className="skeleton h-2.5 w-24" />
           </div>
         </div>

@@ -5,16 +5,17 @@ import Icon from '@/components/Icon';
 
 export default function PasswordField({
   label = 'Password',
+  name,
   value,
   onChange,
   placeholder = 'At least 8 characters',
   autoComplete = 'current-password',
   error,
   hint,
-  name,
   disabled = false,
 }) {
   const [visible, setVisible] = useState(false);
+
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -25,11 +26,12 @@ export default function PasswordField({
         <label htmlFor={id} className="text-[12px] font-medium text-ink-2">
           {label}
         </label>
-        {hint ? (
+
+        {hint && (
           <span id={hintId} className="text-[10.5px] text-ink-3">
             {hint}
           </span>
-        ) : null}
+        )}
       </div>
 
       <div className="relative mt-2">
@@ -38,18 +40,21 @@ export default function PasswordField({
           name={name}
           type={visible ? 'text' : 'password'}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
           placeholder={placeholder}
           autoComplete={autoComplete}
           disabled={disabled}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : hint ? hintId : undefined}
+          aria-describedby={
+            error ? errorId : hint ? hintId : undefined
+          }
           className={`field pr-12 ${
             error
               ? 'border-rose/50 focus:border-rose/60 focus:ring-rose/10'
               : ''
           }`}
         />
+
         <button
           type="button"
           onClick={() => setVisible((current) => !current)}
@@ -61,11 +66,15 @@ export default function PasswordField({
         </button>
       </div>
 
-      {error ? (
-        <p id={errorId} role="alert" className="mt-1.5 text-[11.5px] font-medium text-rose">
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1.5 text-[11.5px] font-medium text-rose"
+        >
           {error}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

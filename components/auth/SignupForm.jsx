@@ -6,94 +6,80 @@ import { useRouter } from 'next/navigation';
 import TextField from '@/components/ui/TextField';
 import PasswordField from '@/components/ui/PasswordField';
 import Icon from '@/components/Icon';
+import axios from 'axios'
 import { AuthError, getCurrentSession, signup } from '@/lib/auth';
 
 const STRENGTH_COLORS = ['#E2556F', '#E2556F', '#D38A0F', '#8970E8', '#2BA670'];
 const STRENGTH_LABELS = ['', 'Keep going', 'Getting there', 'Strong', 'Excellent'];
 
-function passwordScore(password) {
-  if (!password) return 0;
-  let score = 0;
-  if (password.length >= 8) score += 1;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
-  if (/\d/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-  return score;
-}
+const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export default function SignupForm() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const initialFormData = {
+                            name: '',
+                            email:'',
+                            password:'',
+                            confirmPassword:'',
+                            terms:false
+                        }
+  const [formData, setFormData] = useState(initialFormData)
   const [confirm, setConfirm] = useState('');
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const score = passwordScore(password);
-
-  useEffect(() => {
-    if (getCurrentSession()) router.replace('/dashboard');
-  }, [router]);
-
   function clearError(field) {
-    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    setErrors((current) => ({ ...current, [field]: undefined, message: undefined }));
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+const handleChange = (e) => {
+  if (!e?.target) {
+   console.error('Expected an input event, received:', e);
+   return;
+ }
+  const { name, value, type, checked } = e.target;
+
+  setFormData((prev) => ({
+    ...prev,
+    [name]: type === 'checkbox' ? checked : value,
+  }));
+  clearError(name);
+};
+
+  const handleSubmit = async(e) => {
+    e.preventDefault();
     if (submitting) return;
-
-    const issues = {};
-    if (name.trim().length < 2) issues.name = 'Use at least 2 characters for your name.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      issues.email = 'Enter a valid email address.';
-    }
-    if (password.length < 8) issues.password = 'Use at least 8 characters.';
-    if (confirm !== password) issues.confirm = 'Passwords do not match.';
-
-    if (Object.keys(issues).length) {
-      setErrors(issues);
-      return;
-    }
-
-    setSubmitting(true);
-    setErrors({});
-
     try {
-      await signup({ name, email, password });
-      router.replace('/dashboard');
-    } catch (error) {
-      if (error instanceof AuthError) {
-        setErrors({ [error.field]: error.message });
-      } else {
-        setErrors({ form: 'Something went wrong. Try again.' });
-      }
-    } finally {
-      setSubmitting(false);
+  setSubmitting(true);
+      const user = await axios.post(`${baseUrl}/signup`, formData)
+
+      router.push('/dashboard');
+   } catch (error) {
+   const err = error.response?.data?.errors
+    
+    if (error) {
+      err?.map(errors =>(
+        setErrors((current)=>({...current, [errors.field]: errors.message }))
+      ))
+    } else {
+      setErrors({ form: 'Something went wrong. Please try again.' });
     }
+   } finally {
+    setSubmitting(false);
+   }
   }
 
   return (
     <div>
-      {errors.form ? (
-        <div
-          role="alert"
-          className="mb-4 flex items-start gap-2 rounded-xl border border-rose/20 bg-rose/[0.07] px-3 py-2.5 text-[11.5px] leading-4 text-rose"
-        >
-          <Icon name="alert" size={14} className="mt-0.5 shrink-0" />
-          {errors.form}
-        </div>
-      ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField
           label="Name"
-          value={name}
-          onChange={(value) => {
-            setName(value);
-            clearError('name');
-          }}
+          name='name'
+          value={formData.name}
+          onChange={handleChange}
           placeholder="What should Nova call you?"
           autoComplete="name"
           maxLength={40}
@@ -104,12 +90,10 @@ export default function SignupForm() {
 
         <TextField
           label="Email"
+          name='email'
           type="email"
-          value={email}
-          onChange={(value) => {
-            setEmail(value);
-            clearError('email');
-          }}
+          value={formData.email}
+          onChange={handleChange}
           placeholder="you@example.com"
           autoComplete="email"
           inputMode="email"
@@ -120,52 +104,51 @@ export default function SignupForm() {
         <div>
           <PasswordField
             label="Password"
-            value={password}
-            onChange={(value) => {
-              setPassword(value);
-              clearError('password');
-              if (confirm && confirm !== value) {
-                setErrors((current) => ({ ...current, confirm: 'Passwords do not match.' }));
-              }
-            }}
+            name='password'
+            value={formData.password}
             placeholder="At least 8 characters"
             autoComplete="new-password"
+            onChange={handleChange}
             error={errors.password}
           />
-
-          {password ? (
-            <div className="mt-2.5">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4].map((step) => (
-                  <span
-                    key={step}
-                    className="h-1 flex-1 rounded-full transition-colors duration-300"
-                    style={{
-                      backgroundColor:
-                        score >= step ? STRENGTH_COLORS[score] : 'rgb(var(--ink) / 0.08)',
-                    }}
-                  />
-                ))}
-              </div>
-              <p className="mt-1.5 text-[10px] text-ink-3">
-                {STRENGTH_LABELS[score]}
-                <span className="text-ink-3/50"> · mix cases, numbers and a symbol</span>
-              </p>
-            </div>
-          ) : null}
         </div>
 
         <PasswordField
           label="Confirm password"
-          value={confirm}
-          onChange={(value) => {
-            setConfirm(value);
-            clearError('confirm');
-          }}
+          value={formData.confirmPassword}
+          name='confirmPassword'
+          onChange={handleChange}
           placeholder="One more time"
           autoComplete="new-password"
-          error={errors.confirm}
+          error={errors.confirmPassword}
         />
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  name="terms"
+                  checked={formData.terms }
+                  onChange={handleChange}
+                  className="mt-1 h-4 w-4 cursor-pointer accent-orange-500"
+                />
+
+                <label htmlFor="terms" className="text-sm text-gray-600">
+                  I agree to the{" "}
+                  <a href="/terms" className="font-medium text-orange-500 hover:underline">
+                    Terms & Conditions
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy" className="font-medium text-orange-500 hover:underline">
+                    Privacy Policy
+                  </a>
+                  .
+                </label>
+              </div>
+
+              {errors.terms && (
+                <p className="mt-1 text-xs text-red-500">{errors.terms}</p>
+              )}
 
         <button
           type="submit"

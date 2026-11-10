@@ -49,7 +49,7 @@ export default function TextField({
           name={name}
           type={type}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={onChange}
           placeholder={placeholder}
           autoComplete={autoComplete}
           autoFocus={autoFocus}
