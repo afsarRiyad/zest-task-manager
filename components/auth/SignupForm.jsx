@@ -1,23 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {  useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import TextField from '@/components/ui/TextField';
 import PasswordField from '@/components/ui/PasswordField';
 import Icon from '@/components/Icon';
 import axios from 'axios'
-import { AuthError, getCurrentSession, signup } from '@/lib/auth';
-
-const STRENGTH_COLORS = ['#E2556F', '#E2556F', '#D38A0F', '#8970E8', '#2BA670'];
-const STRENGTH_LABELS = ['', 'Keep going', 'Getting there', 'Strong', 'Excellent'];
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export default function SignupForm() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const initialFormData = {
                             name: '',
                             email:'',
@@ -26,7 +20,6 @@ export default function SignupForm() {
                             terms:false
                         }
   const [formData, setFormData] = useState(initialFormData)
-  const [confirm, setConfirm] = useState('');
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,7 +47,9 @@ const handleChange = (e) => {
     try {
   setSubmitting(true);
       const user = await axios.post(`${baseUrl}/signup`, formData)
+      if(user?.data?.status === 'success'){
 
+      }
       router.push('/dashboard');
    } catch (error) {
    const err = error.response?.data?.errors
@@ -73,7 +68,11 @@ const handleChange = (e) => {
 
   return (
     <div>
-
+     {errors.form && (
+    <p className="text-sm text-red-500 text-center">
+        {errors.form}
+    </p>
+)}
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <TextField
           label="Name"
